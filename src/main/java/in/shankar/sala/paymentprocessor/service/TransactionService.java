@@ -52,28 +52,31 @@ public class TransactionService {
             BigDecimal amount,
             TransactionType type) {
 
-        // PESSIMISTIC_WRITE lock is applied by WalletRepository.
         Wallet wallet = walletRepository.findByUserId(userId)
                 .orElseThrow(() ->
                         new WalletNotFoundException(
                                 "Wallet not found for user: " + userId
                         ));
 
-        if (type == TransactionType.DEBIT) {
-            return processDebit(
-                    transactionId,
-                    userId,
-                    amount,
-                    wallet
-            );
-        }
+        return transactionRepository.findByTransactionId(transactionId)
+                .orElseGet(() -> {
 
-        return processCredit(
-                transactionId,
-                userId,
-                amount,
-                wallet
-        );
+                    if (type == TransactionType.DEBIT) {
+                        return processDebit(
+                                transactionId,
+                                userId,
+                                amount,
+                                wallet
+                        );
+                    }
+
+                    return processCredit(
+                            transactionId,
+                            userId,
+                            amount,
+                            wallet
+                    );
+                });
     }
 
     private Transaction processDebit(

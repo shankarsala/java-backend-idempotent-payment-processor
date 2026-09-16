@@ -152,39 +152,22 @@ class TransactionIntegrationTest {
 
         startLatch.countDown();
 
-        int successfulResponses = 0;
-        int conflictResponses = 0;
-        int failedRequests = 0;
-
         for (Future<Integer> response : responses) {
-            try {
-                int status = response.get();
-
-                if (status == 200) {
-                    successfulResponses++;
-                } else if (status == 409) {
-                    conflictResponses++;
-                } else {
-                    throw new AssertionError(
-                            "Unexpected HTTP status: " + status
-                    );
-                }
-
-            } catch (Exception exception) {
-                failedRequests++;
-            }
+            assertEquals(
+                    200,
+                    response.get(),
+                    "All concurrent requests with the same transactionId should return the existing successful transaction."
+            );
         }
 
         executorService.shutdown();
 
         assertTrue(
-                successfulResponses >= 1,
-                "At least one request must succeed."
-        );
-
-        assertEquals(
-                3,
-                successfulResponses + conflictResponses + failedRequests
+                executorService.awaitTermination(
+                        10,
+                        java.util.concurrent.TimeUnit.SECONDS
+                ),
+                "All concurrent requests must finish."
         );
 
         Wallet updatedWallet = walletRepository.findById(wallet.getId()).orElseThrow();
